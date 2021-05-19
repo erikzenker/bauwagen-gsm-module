@@ -22,10 +22,7 @@ TinyGsm modem(SerialAT);
   1000000ULL             /* Conversion factor for micro seconds to seconds */
 #define TIME_TO_SLEEP 60 /* Time ESP32 will go to sleep (in seconds) */
 
-// Server details
-const char server[] = "vsh.pp.ua";
-const char resource[] = "/TinyGSM/logo.txt";
-const int port = 80;
+
 
 // Your GPRS credentials (leave empty, if missing)
 const char apn[] = "pinternet.interkom.de"; // Your APN
@@ -77,7 +74,7 @@ void startModem() {
   modem.restart();
 
   // Turn off network status lights to reduce current consumption
-  // turnOffNetlight();
+  turnOffNetlight();
 
   // The status light cannot be turned off, only physically removed
   // turnOffStatuslight();
@@ -115,33 +112,6 @@ void startModem() {
     return;
   }
   SerialMon.println(" OK");
-
-  SerialMon.print("Connecting to ");
-  SerialMon.print(server);
-  if (!client.connect(server, port)) {
-    SerialMon.println(" fail");
-    delay(10000);
-    return;
-  }
-  SerialMon.println(" OK");
-
-  // Make a HTTP GET request:
-  SerialMon.println("Performing HTTP GET request...");
-  client.print(String("GET ") + resource + " HTTP/1.1\r\n");
-  client.print(String("Host: ") + server + "\r\n");
-  client.print("Connection: close\r\n\r\n");
-  client.println();
-
-  unsigned long timeout = millis();
-  while (client.connected() && millis() - timeout < 10000L) {
-    // Print available data
-    while (client.available()) {
-      char c = client.read();
-      SerialMon.print(c);
-      timeout = millis();
-    }
-  }
-  SerialMon.println();
 }
 
 void stopModem()
@@ -239,10 +209,6 @@ void stopModem()
   modem.poweroff();
 
   SerialMon.println(F("Poweroff"));
-
-  esp_sleep_enable_timer_wakeup(TIME_TO_SLEEP * uS_TO_S_FACTOR);
-
-  esp_deep_sleep_start();
 
   /*
   The sleep current using AXP192 power management is about 500uA,

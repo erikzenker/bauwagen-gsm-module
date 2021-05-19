@@ -1,7 +1,5 @@
 #include <PubSubClient.h>
-#include <Adafruit_AHTX0.h>
 
-Adafruit_AHTX0 aht;
 // MQTT details
 const char *broker = "broker.hivemq.com";
 const char *topicLed = "v1/devices/bauwagen/led";
@@ -10,16 +8,25 @@ const char *topicSensors = "v1/devices/bauwagen/sensors";
 const char *topic = "v1/devices/bauwagen";
 
 uint32_t lastReconnectAttempt = 0;
-int ledStatus = LOW;
+RTC_DATA_ATTR int bootCount = 0;
 
 PubSubClient mqtt(client);
 
-void setupAht(){
-  if (! aht.begin()) {
-    Serial.println("Could not find AHT? Check wiring");
-    while (1) delay(10);
-  }
-  Serial.println("AHT10 or AHT20 found");
+
+void sendSensorData() {
+  sensors_event_t humidityEvent, tempEvent;
+  aht.getEvent(&humidityEvent, &tempEvent);
+
+  String comma = String(",");
+  String signalQuality = String("\"signalQuality\":") + String(modem.getSignalQuality());
+  String temperature = String("\"temperature\":") + String(tempEvent.temperature);
+  String bootCountS = String("\"bootCount\":") + String(bootCount);
+  String humidity = String("\"humidity\":") + String(humidityEvent.relative_humidity);
+  String message = String("{") + signalQuality + comma + bootCountS + comma + temperature + comma + humidity + String("}");
+  Serial.print("Send mqtt message: " + message);
+  mqtt.publish(topicSensors, message.c_str());
+
+  bootCount++;
 }
 
 void mqttCallback(char *topic, byte *payload, unsigned int len) {
@@ -29,37 +36,7 @@ void mqttCallback(char *topic, byte *payload, unsigned int len) {
   SerialMon.write(payload, len);
   SerialMon.println();
 
-  sensors_event_t humidityEvent, tempEvent;
-  aht.getEvent(&humidityEvent, &tempEvent);
-  Serial.print("Temperature: "); Serial.print(tempEvent.temperature); Serial.println(" degrees C");
-  Serial.print("Humidity: "); Serial.print(humidityEvent.relative_humidity); Serial.println("% rH");
-
-  // if (String(topic) == topicLed) {
-  ledStatus = !ledStatus;
-
-  digitalWrite(LED_GPIO, ledStatus);
-  String comma = String(",");
-  String ledStatus = String("\"ledState\":") + (ledStatus ? String("1") : String("0"));
-  String temperature = String("\"temperature\":") + String(tempEvent.temperature);
-  String humidity = String("\"humidity\":") + String(humidityEvent.relative_humidity);
-  String message = String("{") + ledStatus + comma + temperature + comma + humidity + String("}");
-  mqtt.publish(topicSensors, message.c_str());
-  // }
-}
-
-void sendSensorData() {
-  sensors_event_t humidityEvent, tempEvent;
-  aht.getEvent(&humidityEvent, &tempEvent);
-  Serial.print("Temperature: "); Serial.print(tempEvent.temperature); Serial.println(" degrees C");
-  Serial.print("Humidity: "); Serial.print(humidityEvent.relative_humidity); Serial.println("% rH");
-
-  digitalWrite(LED_GPIO, ledStatus);
-  String comma = String(",");
-  String ledStatus = String("\"ledState\":") + (ledStatus ? String("1") : String("0"));
-  String temperature = String("\"temperature\":") + String(tempEvent.temperature);
-  String humidity = String("\"humidity\":") + String(humidityEvent.relative_humidity);
-  String message = String("{") + ledStatus + comma + temperature + comma + humidity + String("}");
-  mqtt.publish(topicSensors, message.c_str());
+  sendSensorData();
 }
 
 boolean mqttConnect() {
