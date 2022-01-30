@@ -67,7 +67,7 @@ void setupModem() {
   digitalWrite(LED_GPIO, LED_OFF);
 }
 
-void startModem() {
+bool startModem() {
   // Restart takes quite some time
   // To skip it, call init() instead of restart()
   SerialMon.println("Initializing modem...");
@@ -93,8 +93,8 @@ void startModem() {
   if (!modem.waitForNetwork(240000L)) {
     SerialMon.println(" fail");
     delay(10000);
-    return;
-  }
+    return false;
+  }           
   SerialMon.println(" OK");
 
   // When the network connection is successful, turn on the indicator
@@ -109,9 +109,10 @@ void startModem() {
   if (!modem.gprsConnect(apn, gprsUser, gprsPass)) {
     SerialMon.println(" fail");
     delay(10000);
-    return;
+    return false;
   }
   SerialMon.println(" OK");
+  return true;
 }
 
 void stopModem()

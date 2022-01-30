@@ -1,4 +1,4 @@
-#define SIM800L_IP5306_VERSION_20190610
+#define SIM800L_IP5306_VERSION_20200811
 // Set serial for debug console (to the Serial Monitor, default speed 115200)
 #define SerialMon Serial
 // Set serial for AT commands (to the module)
@@ -33,6 +33,14 @@ void print_wakeup_reason(){
   }
 }
 
+void sleep(){
+  Serial.println("Going to sleep now");
+  delay(1000);
+  Serial.flush(); 
+
+  esp_deep_sleep_start();
+}
+
 void setup() {
   // Set console baud rate
   SerialMon.begin(115200);
@@ -52,6 +60,7 @@ void setup() {
   // Start power management
   if (setupPMU() == false) {
     Serial.println("Setting power error");
+    return;
   }
 
   setupAht();
@@ -61,7 +70,11 @@ void setup() {
   // Set GSM module baud rate and UART pins
   SerialAT.begin(115200, SERIAL_8N1, MODEM_RX, MODEM_TX);
 
-  startModem();
+  if(!startModem()){
+    sleep();  
+    return;  
+  }
+
   setupMqtt();
 
   // MAIN WORK
@@ -71,11 +84,7 @@ void setup() {
 
   stopModem();
 
-  Serial.println("Going to sleep now");
-  delay(1000);
-  Serial.flush(); 
-
-  esp_deep_sleep_start();
+  sleep();
 }
 
 void loop() {

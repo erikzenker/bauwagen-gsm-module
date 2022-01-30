@@ -23,7 +23,7 @@
 // setPowerBoostKeepOn
 bool setupPMU()
 {
-    bool en = true;
+    bool en = false;
     Wire.begin(I2C_SDA, I2C_SCL);
     Wire.beginTransmission(IP5306_ADDR);
     Wire.write(IP5306_REG_SYS_CTL0);
